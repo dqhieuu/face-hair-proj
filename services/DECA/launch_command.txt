@@ -1,0 +1,1 @@
+python demos/demo_reconstruct.py -i TestSamples/my_imgs --saveDepth True --saveObj True --useTex True

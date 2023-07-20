@@ -1,0 +1,214 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylon.objFileLoader.js"></script>
+    <style>
+      .upload-file {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+      }
+      #renderCanvas {
+        width: 99%;
+        height: calc(90vh - 120px);
+        touch-action: none;
+      }
+
+      /* CSS */
+      .button-63 {
+        align-items: center;
+        background-image: linear-gradient(
+          144deg,
+          #af40ff,
+          #5b42f3 50%,
+          #00ddeb
+        );
+        border: 0;
+        border-radius: 8px;
+        box-shadow: rgba(151, 65, 252, 0.2) 0 15px 30px -5px;
+        box-sizing: border-box;
+        color: #ffffff;
+        display: flex;
+        font-family: Phantomsans, sans-serif;
+        font-size: 20px;
+        justify-content: center;
+        line-height: 1em;
+        width: 100%;
+        padding: 19px 24px;
+        text-decoration: none;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: manipulation;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .button-63:active,
+      .button-63:hover {
+        outline: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="upload-file">
+      <label for="myfile" class="button-63"> Click to upload image</label>
+      <input type="file" id="myfile" style="display: none" accept="image/*" />
+    </div>
+    <canvas id="renderCanvas" touch-action="none"></canvas>
+    <script>
+      function dragOverHandler(ev) {
+        // Prevent default behavior (Prevent file from being opened)
+        ev.preventDefault();
+      }
+
+      function hasTouchScreen() {
+        let hasTouchScreen = false;
+        if ("maxTouchPoints" in navigator) {
+          hasTouchScreen = navigator.maxTouchPoints > 0;
+        } else if ("msMaxTouchPoints" in navigator) {
+          hasTouchScreen = navigator.msMaxTouchPoints > 0;
+        } else {
+          const mQ = matchMedia?.("(pointer:coarse)");
+          if (mQ?.media === "(pointer:coarse)") {
+            hasTouchScreen = !!mQ.matches;
+          } else if ("orientation" in window) {
+            hasTouchScreen = true; // deprecated, but good fallback
+          } else {
+            // Only as a last resort, fall back to user agent sniffing
+            const UA = navigator.userAgent;
+            hasTouchScreen =
+              /\b(BlackBerry|webOS|iPhone|IEMobile)\b/i.test(UA) ||
+              /\b(Android|Windows Phone|iPad|iPod)\b/i.test(UA);
+          }
+        }
+        return hasTouchScreen;
+      }
+
+      (async () => {
+        BABYLON.OBJFileLoader.COMPUTE_NORMALS = true;
+
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true);
+
+        const scene = new BABYLON.Scene(engine);
+        if (!hasTouchScreen()) {
+          scene.debugLayer.show();
+        }
+
+        const root = new BABYLON.Mesh("root", scene);
+
+        const camera = new BABYLON.ArcRotateCamera(
+          "camera",
+          Math.PI / 2,
+          Math.PI / 2.5,
+          0.5,
+          new BABYLON.Vector3(0, 0, 0)
+        );
+        camera.attachControl(canvas, true);
+        camera.minZ = 0.1;
+        camera.wheelPrecision = 300;
+        camera.pinchPrecision = 500;
+        camera.panningSensibility = 1000;
+        camera.panningInertia = 0.3;
+
+        const light = new BABYLON.HemisphericLight(
+          "HemiLight",
+          new BABYLON.Vector3(0, 1, 0),
+          scene
+        );
+
+        const myMaterial = new BABYLON.PBRMetallicRoughnessMaterial(
+          "myMaterial",
+          scene
+        );
+        myMaterial.diffuseColor = new BABYLON.Color3(1, 0, 1);
+        myMaterial.specularColor = new BABYLON.Color3(0.5, 0.6, 0.87);
+        myMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
+        myMaterial.ambientColor = new BABYLON.Color3(0.23, 0.98, 0.53);
+
+        const loadFile = function (url) {
+          for (const child of root.getChildren()) {
+            child.dispose();
+          }
+
+          if (url != null) {
+            const mesh = BABYLON.SceneLoader.ImportMeshAsync(
+              "",
+              url,
+              undefined,
+              undefined,
+              undefined,
+              ".obj"
+            );
+            mesh.then((result) => {
+              result.meshes.forEach((mesh) => {
+                mesh.parent = root;
+              });
+            });
+          }
+        };
+
+        engine.runRenderLoop(function () {
+          scene.render();
+        });
+
+        window.addEventListener("resize", function () {
+          engine.resize();
+        });
+
+        async function processImage(imageFile) {
+          const formData = new FormData();
+          formData.append("file", imageFile);
+
+          const requestOptions = {
+            method: "POST",
+            body: formData,
+          };
+
+          const blob = await fetch(
+            "/upload",
+            requestOptions
+          ).then((response) => response.blob());
+          console.log(await blob.text());
+          const blobUrl = URL.createObjectURL(blob);
+
+          loadFile(blobUrl);
+        }
+
+        // Drag n drop upload
+        document.body.addEventListener("dragover", dragOverHandler);
+        document.body.addEventListener("drop", (ev) => {
+          // Prevent default behavior (Prevent file from being opened)
+          ev.preventDefault();
+
+          let file;
+
+          if (ev.dataTransfer.items?.length > 0) {
+            const firstItem = ev.dataTransfer.items[0];
+            if (firstItem.kind === "file") {
+              file = firstItem.getAsFile();
+            }
+          } else if (ev.dataTransfer.files?.length > 0) {
+            file = ev.dataTransfer.files[0];
+          }
+
+          if (file != null) {
+            processImage(file);
+          }
+        });
+
+        // Click upload
+        document
+          .querySelector("#myfile")
+          .addEventListener("change", async (e) => {
+            const file = e.target.files[0];
+            if (file != null) {
+              processImage(file);
+            }
+          });
+      })();
+    </script>
+  </body>
+</html>

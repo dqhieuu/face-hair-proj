@@ -1,0 +1,17 @@
+venv
+
+demo
+data
+wandb
+debug
+weight
+vismap
+convdata
+
+src/__pycache__
+*.pyc
+*/convdata/
+*data/
+.vscode
+.wandb
+*/__pycache__
