@@ -3,7 +3,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    <script src="https://cdn.babylonjs.com/loaders/babylon.objFileLoader.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
       .upload-file {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -12,7 +13,7 @@
       }
       #renderCanvas {
         width: 99%;
-        height: calc(90vh - 120px);
+        height: calc(85vh - 120px);
         touch-action: none;
       }
 
@@ -49,6 +50,13 @@
       .button-63:hover {
         outline: 0;
       }
+
+      .sliders {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        width: 100%;
+      }
     </style>
   </head>
   <body>
@@ -57,6 +65,83 @@
       <input type="file" id="myfile" style="display: none" accept="image/*" />
     </div>
     <canvas id="renderCanvas" touch-action="none"></canvas>
+    <div id="img-hash">Image hash: </div>
+<!--    6 sliders 2 columns -->
+    <button id="apply-emotion">Apply emotion</button>
+    <div class="sliders">
+      <div class="column">
+        <div class="slider">
+          <div>Happy</div>
+            <input type="range" min="0" max="1" value="0" step="0.01" id="happy"><span id="happy-value">val</span>
+        </div>
+        <div class="slider">
+          <div>Sad</div>
+            <input type="range" min="0" max="1" value="0" step="0.01" id="sad"><span id="sad-value">val</span>
+        </div>
+        <div class="slider">
+          <div>Fear</div>
+            <input type="range" min="0" max="1" value="0" step="0.01" id="fear"><span id="fear-value">val</span>
+        </div>
+        </div>
+        <div class="column">
+        <div class="slider">
+          <div>Anger</div>
+            <input type="range" min="0" max="1" value="0" step="0.01" id="anger"><span id="anger-value">val</span>
+        </div>
+        <div class="slider">
+          <div>Surprise</div>
+            <input type="range" min="0" max="1" value="0" step="0.01" id="surprise"><span id="surprise-value">val</span>
+        </div>
+        <div class="slider">
+          <div>Disgust</div>
+            <input type="range" min="0" max="1" value="0" step="0.01" id="disgust"><span id="disgust-value">val</span>
+        </div>
+        </div>
+    </div>
+    <script>
+      // Update span value when slider value is changed
+        const happySlider = document.getElementById("happy");
+        const happyValue = document.getElementById("happy-value");
+        happyValue.innerHTML = happySlider.value;
+        happySlider.oninput = function () {
+          happyValue.innerHTML = this.value;
+        };
+
+        const sadSlider = document.getElementById("sad");
+        const sadValue = document.getElementById("sad-value");
+        sadValue.innerHTML = sadSlider.value;
+        sadSlider.oninput = function () {
+          sadValue.innerHTML = this.value;
+        };
+
+        const fearSlider = document.getElementById("fear");
+        const fearValue = document.getElementById("fear-value");
+        fearValue.innerHTML = fearSlider.value;
+        fearSlider.oninput = function () {
+          fearValue.innerHTML = this.value;
+        };
+
+        const angerSlider = document.getElementById("anger");
+        const angerValue = document.getElementById("anger-value");
+        angerValue.innerHTML = angerSlider.value;
+        angerSlider.oninput = function () {
+          angerValue.innerHTML = this.value;
+        };
+
+        const surpriseSlider = document.getElementById("surprise");
+        const surpriseValue = document.getElementById("surprise-value");
+        surpriseValue.innerHTML = surpriseSlider.value;
+        surpriseSlider.oninput = function () {
+          surpriseValue.innerHTML = this.value;
+        };
+
+        const disgustSlider = document.getElementById("disgust");
+        const disgustValue = document.getElementById("disgust-value");
+        disgustValue.innerHTML = disgustSlider.value;
+        disgustSlider.oninput = function () {
+          disgustValue.innerHTML = this.value;
+        };
+    </script>
     <script>
       function dragOverHandler(ev) {
         // Prevent default behavior (Prevent file from being opened)
@@ -88,11 +173,13 @@
 
       (async () => {
         BABYLON.OBJFileLoader.COMPUTE_NORMALS = true;
+        BABYLON.OBJFileLoader.OPTIMIZE_WITH_UV = true;
 
         const canvas = document.getElementById("renderCanvas");
         const engine = new BABYLON.Engine(canvas, true);
 
         const scene = new BABYLON.Scene(engine);
+        scene.useRightHandedSystem = true;
         if (!hasTouchScreen()) {
           scene.debugLayer.show();
         }
@@ -119,19 +206,17 @@
           scene
         );
 
-        const myMaterial = new BABYLON.PBRMetallicRoughnessMaterial(
-          "myMaterial",
-          scene
-        );
-        myMaterial.diffuseColor = new BABYLON.Color3(1, 0, 1);
-        myMaterial.specularColor = new BABYLON.Color3(0.5, 0.6, 0.87);
-        myMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
-        myMaterial.ambientColor = new BABYLON.Color3(0.23, 0.98, 0.53);
+        const myMaterial = new BABYLON.StandardMaterial("myMaterial", scene);
 
-        const loadFile = function (url) {
+        function disposeScene() {
+          console.log("disposeScene", root.getChildren());
           for (const child of root.getChildren()) {
             child.dispose();
           }
+        }
+
+        const loadFile = function (url) {
+          disposeScene()
 
           if (url != null) {
             const mesh = BABYLON.SceneLoader.ImportMeshAsync(
@@ -150,6 +235,39 @@
           }
         };
 
+        const loadFileByName = async (url, name) => {
+          if (url == null) {
+            return;
+          }
+          if (name.endsWith("detail.obj")) {
+            BABYLON.SceneLoader.ImportMeshAsync(
+              "",
+              url,
+              undefined,
+              undefined,
+              undefined,
+              ".obj"
+            ).then((result) => {
+              result.meshes.forEach((mesh) => {
+                mesh.parent = root;
+                mesh.material = myMaterial;
+              });
+            });
+          } else if (name.endsWith(".mtl")) {
+            const blob = await fetch(url).then((response) => response.text());
+              new BABYLON.MTLFileLoader().parseMTL(
+                scene,
+                blob,
+                url,
+              )
+          } else if (name.endsWith("normals.png")) {
+
+          } else if (name.endsWith(".png")) {
+            const texture = new BABYLON.Texture(url, scene, undefined, false);
+            myMaterial.albedoTexture = texture;
+          }
+        };
+
         engine.runRenderLoop(function () {
           scene.render();
         });
@@ -157,6 +275,8 @@
         window.addEventListener("resize", function () {
           engine.resize();
         });
+
+        let currentImgHash = null;
 
         async function processImage(imageFile) {
           const formData = new FormData();
@@ -170,11 +290,30 @@
           const blob = await fetch(
             "/upload",
             requestOptions
-          ).then((response) => response.blob());
-          console.log(await blob.text());
-          const blobUrl = URL.createObjectURL(blob);
+          ).then((response) => {
+            let imgHash = response.headers.get("Image-Hash")
+            document.querySelector("#img-hash").innerHTML =
+              "Image hash: " + imgHash;
+            currentImgHash = imgHash;
+            return response.blob()
+          });
 
-          loadFile(blobUrl);
+          disposeScene()
+
+          const zip = new JSZip();
+
+          zip.loadAsync(blob).then((zip) => {
+            zip.forEach((relativePath, zipEntry) => {
+              console.log(relativePath);
+              zipEntry.async("blob").then((blob) => {
+                const blobUrl = URL.createObjectURL(blob);
+                loadFileByName(blobUrl,relativePath);
+              });
+            });
+          }).catch(() => {
+            // loadFile(blobUrl);
+            }
+          )
         }
 
         // Drag n drop upload
@@ -208,6 +347,56 @@
               processImage(file);
             }
           });
+
+        async function updateEmotion(emotionArr, imgHash) {
+
+          const requestOptions = {
+            method: "POST",
+            body: JSON.stringify({
+              emotionArr: emotionArr,
+              imgHash: imgHash
+            })
+          };
+
+          const blob = await fetch(
+            "/update",
+            requestOptions
+          ).then((response) => {
+            return response.blob()
+          });
+
+          disposeScene()
+
+          const zip = new JSZip();
+
+          zip.loadAsync(blob).then((zip) => {
+            zip.forEach((relativePath, zipEntry) => {
+              console.log(relativePath);
+              zipEntry.async("blob").then((blob) => {
+                const blobUrl = URL.createObjectURL(blob);
+                loadFileByName(blobUrl,relativePath);
+              });
+            });
+          }).catch(() => {
+            // loadFile(blobUrl);
+            }
+          )
+        }
+
+        document.querySelector("#apply-emotion").addEventListener("click", () => {
+            const emotionArr = [
+                    document.getElementById("happy").value,
+                    document.getElementById("sad").value,
+                    document.getElementById("fear").value,
+                    document.getElementById("anger").value,
+                    document.getElementById("surprise").value,
+                    document.getElementById("disgust").value,
+            ].map((x) => parseFloat(x));
+
+            if (currentImgHash != null) {
+              updateEmotion(emotionArr, currentImgHash);
+            }
+        });
       })();
     </script>
   </body>

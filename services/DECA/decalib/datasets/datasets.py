@@ -53,7 +53,7 @@ class TestData(Dataset):
         if isinstance(testpath, list):
             self.imagepath_list = testpath
         elif os.path.isdir(testpath): 
-            self.imagepath_list = glob(testpath + '/*.jpg') +  glob(testpath + '/*.png') + glob(testpath + '/*.bmp')
+            self.imagepath_list = glob(testpath + '/*.jpg') + glob(testpath + '/*.JPG') + glob(testpath + '/*.png') + glob(testpath + '/*.bmp')
         elif os.path.isfile(testpath) and (testpath[-3:] in ['jpg', 'png', 'bmp']):
             self.imagepath_list = [testpath]
         elif os.path.isfile(testpath) and (testpath[-3:] in ['mp4', 'csv', 'vid', 'ebm']):

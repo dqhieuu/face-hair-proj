@@ -1,12 +1,14 @@
 import base64
 import io
+from typing import Dict, Any, List
 
 import numpy as np
 import requests
-from PIL import Image
-from fastapi import FastAPI, UploadFile, Response
+from PIL import Image, ImageOps
+from fastapi import FastAPI, UploadFile, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 webapp = FastAPI()
 
@@ -25,9 +27,10 @@ webapp.mount("/upload-ui", StaticFiles(directory="static", html=True), name="sta
 async def create_upload_file(file: UploadFile, output_format='obj'):
     file_bytes = await file.read()
     file_pillow = Image.open(io.BytesIO(file_bytes))
+    file_pillow = ImageOps.exif_transpose(file_pillow)
     file_np = np.array(file_pillow)
 
-    head_model_response = requests.post('http://127.0.0.1:11100', json={
+    head_model_response = requests.post('http://127.0.0.1:11200', json={
         'numpy_img': base64.b64encode(file_np).decode('utf-8'),
         'numpy_shape': file_np.shape,
         'output_extension': output_format
@@ -37,4 +40,22 @@ async def create_upload_file(file: UploadFile, output_format='obj'):
 
     return Response(content=head_model,
                     media_type=f"model/{output_format}",
-                    headers={"Content-Disposition": f'attachment; filename="mesh.{output_format}"'})
+                    headers={"Content-Disposition": f'attachment; filename="mesh.{output_format}"',
+                             'Image-Hash': head_model_response.headers['Image-Hash']
+                             }
+    )
+
+
+@webapp.post("/update")
+async def update_parameters(params: Request):
+    params = await params.json()
+
+    head_model_response = requests.post('http://127.0.0.1:11200/update', json=params)
+
+    print(head_model_response)
+
+    head_model_zip = head_model_response.content
+
+    return Response(content=head_model_zip,
+                    media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="mesh.zip"'})
