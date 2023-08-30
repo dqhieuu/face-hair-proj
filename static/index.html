@@ -13,7 +13,7 @@
       }
       #renderCanvas {
         width: 99%;
-        height: calc(85vh - 120px);
+        height: calc(80vh - 120px);
         touch-action: none;
       }
 
@@ -60,6 +60,12 @@
     </style>
   </head>
   <body>
+    <div style="margin-bottom: 8px">
+      <label >
+        Apply image texture to face
+        <input type="checkbox" checked />
+      </label>
+    </div>
     <div class="upload-file">
       <label for="myfile" class="button-63"> Click to upload image</label>
       <input type="file" id="myfile" style="display: none" accept="image/*" />
@@ -174,6 +180,8 @@
       (async () => {
         BABYLON.OBJFileLoader.COMPUTE_NORMALS = true;
         BABYLON.OBJFileLoader.OPTIMIZE_WITH_UV = true;
+        BABYLON.OBJFileLoader.OPTIMIZE_NORMALS = true;
+        BABYLON.OBJFileLoader.IMPORT_VERTEX_COLORS = true;
 
         const canvas = document.getElementById("renderCanvas");
         const engine = new BABYLON.Engine(canvas, true);
@@ -202,7 +210,7 @@
 
         const light = new BABYLON.HemisphericLight(
           "HemiLight",
-          new BABYLON.Vector3(0, 1, 0),
+          new BABYLON.Vector3(0, 0.2, .8),
           scene
         );
 
@@ -287,8 +295,11 @@
             body: formData,
           };
 
+          const includeTexture = document.querySelector("input[type=checkbox]")
+            .checked;
+
           const blob = await fetch(
-            "/upload",
+            `/upload?include_tex=${includeTexture}`,
             requestOptions
           ).then((response) => {
             let imgHash = response.headers.get("Image-Hash")
@@ -346,15 +357,20 @@
             if (file != null) {
               processImage(file);
             }
+            e.target.value = null
           });
 
         async function updateEmotion(emotionArr, imgHash) {
+
+          const includeTexture = document.querySelector("input[type=checkbox]")
+            .checked;
 
           const requestOptions = {
             method: "POST",
             body: JSON.stringify({
               emotionArr: emotionArr,
-              imgHash: imgHash
+              imgHash: imgHash,
+              includeTex: includeTexture
             })
           };
 

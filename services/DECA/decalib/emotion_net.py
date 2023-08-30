@@ -48,7 +48,8 @@ class MyNet(nn.Module):
     truth_exp, truth_pose_jaw, truth_pose_global = truth[:, 0:50], truth[:, 50:53], truth[:, 53:]
     mae = nn.L1Loss()
     loss_exp = mae(pred_exp, truth_exp)
-    loss_pose_global = mae(pred_pose_global, truth_pose_global)
+    # loss_pose_global = mae(pred_pose_global, truth_pose_global)
+    loss_pose_global = torch.tensor(0.0)
     loss_pose_jaw = mae(pred_pose_jaw, truth_pose_jaw) * 20 # jaw params are important
 
     total_loss = loss_exp + loss_pose_global + loss_pose_jaw

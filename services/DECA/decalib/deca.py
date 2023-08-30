@@ -238,8 +238,18 @@ class DECA(nn.Module):
             uv_gt = F.grid_sample(images, uv_pverts.permute(0,2,3,1)[:,:,:,:2], mode='bilinear', align_corners=False)
             if self.cfg.model.use_tex:
                 ## TODO: poisson blending should give better-looking results
+                uv_face_eye_mask_copy = self.uv_face_eye_mask.clone()
                 if self.cfg.model.extract_tex:
-                    uv_texture_gt = uv_gt[:,:3,:,:]*self.uv_face_eye_mask + (uv_texture[:,:3,:,:]*(1-self.uv_face_eye_mask))
+                    # set uv_face_eye_mask to 0 if all 3 (or 4) color values of uv_gt sum is 0.01 at current index
+                    uv_face_eye_mask_copy = torch.where(uv_gt[:, :3, :, :].sum(dim=1) <= 0.01,torch.zeros_like(uv_gt[:, :3, :, :]), uv_face_eye_mask_copy)
+                    # erode the uv_face_eye_mask with opencv
+                    kernel = np.ones((3,3),np.uint8)
+                    for i in range(uv_face_eye_mask_copy.shape[0]):
+                        mask = uv_face_eye_mask_copy[i, :, :, :].cpu().numpy()
+                        mask = cv2.erode(mask, kernel, iterations=4)
+                        uv_face_eye_mask_copy[i, :, :, :] = torch.from_numpy(mask)
+
+                    uv_texture_gt = uv_gt[:,:3,:,:]*uv_face_eye_mask_copy + (uv_texture[:,:3,:,:]*(1-uv_face_eye_mask_copy))
                 else:
                     uv_texture_gt = uv_texture[:,:3,:,:]
             else:

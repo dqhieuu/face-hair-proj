@@ -5,10 +5,11 @@ from typing import Dict, Any, List
 import numpy as np
 import requests
 from PIL import Image, ImageOps
-from fastapi import FastAPI, UploadFile, Response, Request
+from fastapi import FastAPI, UploadFile, Response, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing_extensions import Annotated
 
 webapp = FastAPI()
 
@@ -24,16 +25,18 @@ webapp.mount("/upload-ui", StaticFiles(directory="static", html=True), name="sta
 
 
 @webapp.post("/upload")
-async def create_upload_file(file: UploadFile, output_format='obj'):
+async def create_upload_file(file: UploadFile, output_format='obj', include_tex: bool=True):
+    print(include_tex)
     file_bytes = await file.read()
     file_pillow = Image.open(io.BytesIO(file_bytes))
-    file_pillow = ImageOps.exif_transpose(file_pillow)
+    file_pillow = ImageOps.exif_transpose(file_pillow) # fix orientation
     file_np = np.array(file_pillow)
 
     head_model_response = requests.post('http://127.0.0.1:11200', json={
         'numpy_img': base64.b64encode(file_np).decode('utf-8'),
         'numpy_shape': file_np.shape,
-        'output_extension': output_format
+        'output_extension': output_format,
+        'include_tex': include_tex
     })
 
     head_model = head_model_response.content

@@ -140,8 +140,10 @@ def output_from_image(img: np.array, emotion_arr, deca):
             codedict = deca.encode(images)
             if emotion_arr is not None:
                 exp, pose = emotion_model(codedict['shape'], torch.tensor([emotion_arr]).to(device))
+                # print(exp, pose)
+                # print(emotion_arr)
                 codedict['exp'] = exp
-                codedict['pose'] = pose
+                codedict['pose'][0:3] = pose[0:3] # only jaw pose
             opdict, visdict = deca.decode(codedict)  # tensor
 
             os.makedirs(os.path.join(savefolder, name), exist_ok=True)
