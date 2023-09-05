@@ -66,10 +66,12 @@ def main(args):
             images = testdata[i]['image'].to(device)[None, ...]
             with torch.no_grad():
                 codedict = deca.encode(images)
+                opdict_pre_exp, visdict_pre_exp = deca.decode(codedict)
                 exp, pose = emotion_model(codedict['shape'], emotion_code_to_input_tensor(emo_code))
                 codedict['exp'] = exp
                 codedict['pose'] = pose
                 opdict, visdict = deca.decode(codedict)  # tensor
+                opdict['uv_texture_gt'] = opdict_pre_exp['uv_texture_gt']
                 if args.render_orig:
                     tform = testdata[i]['tform'][None, ...]
                     tform = torch.inverse(tform).transpose(1, 2).to(device)
@@ -138,13 +140,14 @@ def output_from_image(img: np.array, emotion_arr, deca):
         images = testdata[i]['image'].to(device)[None, ...]
         with torch.no_grad():
             codedict = deca.encode(images)
+
+            opdict_pre_exp, visdict_pre_exp = deca.decode(codedict)
             if emotion_arr is not None:
                 exp, pose = emotion_model(codedict['shape'], torch.tensor([emotion_arr]).to(device))
-                # print(exp, pose)
-                # print(emotion_arr)
                 codedict['exp'] = exp
                 codedict['pose'][0:3] = pose[0:3] # only jaw pose
             opdict, visdict = deca.decode(codedict)  # tensor
+            opdict['uv_texture_gt'] = opdict_pre_exp['uv_texture_gt']
 
             os.makedirs(os.path.join(savefolder, name), exist_ok=True)
             deca.save_obj(os.path.join(savefolder, name, name + '.obj'), opdict)
