@@ -55,8 +55,6 @@ async def update_parameters(params: Request):
 
     head_model_response = requests.post('http://127.0.0.1:11200/update', json=params)
 
-    print(head_model_response)
-
     head_model_zip = head_model_response.content
 
     return Response(content=head_model_zip,

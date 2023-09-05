@@ -163,7 +163,7 @@ class DECA(nn.Module):
         batch_size = images.shape[0]
         
         ## decode
-        verts, landmarks2d, landmarks3d = self.flame(shape_params=codedict['shape'], expression_params=codedict['exp'], pose_params=codedict['pose'])
+        verts, landmarks2d, landmarks3d = self.flame(shape_params=codedict['shape'], expression_params=codedict['exp'], pose_params=codedict['pose'], neck_pose_params=codedict.get('neck_pose'), eye_pose_params=codedict.get('eye_pose'))
         if self.cfg.model.use_tex:
             albedo = self.flametex(codedict['tex'])
         else:

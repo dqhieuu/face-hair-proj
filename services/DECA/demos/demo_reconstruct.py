@@ -123,7 +123,7 @@ def init_my_deca():
     os.makedirs(savefolder, exist_ok=True)
     return DECA(config=deca_cfg, device=device)
 
-def output_from_image(img: np.array, emotion_arr, deca):
+def output_from_image(img: np.array, deca, emotion_arr=None, exp_arr=None, pose_arr=None, neck_pose_arr=None, eye_pose_arr=None):
     device = 'cuda'
     savefolder = 'output'
     tempfolder = f'temp/{time()}'
@@ -140,13 +140,28 @@ def output_from_image(img: np.array, emotion_arr, deca):
         images = testdata[i]['image'].to(device)[None, ...]
         with torch.no_grad():
             codedict = deca.encode(images)
-
+            print(codedict)
             opdict_pre_exp, visdict_pre_exp = deca.decode(codedict)
+
             if emotion_arr is not None:
                 exp, pose = emotion_model(codedict['shape'], torch.tensor([emotion_arr]).to(device))
                 codedict['exp'] = exp
                 codedict['pose'][0:3] = pose[0:3] # only jaw pose
+
+            if exp_arr is not None:
+                codedict['exp'] = torch.tensor([exp_arr]).to(device)
+
+            if pose_arr is not None:
+                codedict['pose'] = torch.tensor([pose_arr]).to(device)
+
+            if neck_pose_arr is not None:
+                codedict['neck_pose'] = torch.tensor([neck_pose_arr]).to(device)
+
+            if eye_pose_arr is not None:
+                codedict['eye_pose'] = torch.tensor([eye_pose_arr]).to(device)
+
             opdict, visdict = deca.decode(codedict)  # tensor
+            # correct uv mapping
             opdict['uv_texture_gt'] = opdict_pre_exp['uv_texture_gt']
 
             os.makedirs(os.path.join(savefolder, name), exist_ok=True)

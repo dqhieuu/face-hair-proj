@@ -57,6 +57,28 @@
         justify-content: space-around;
         width: 100%;
       }
+
+      .sliders-style {
+        display: flex;
+        margin-bottom: 2rem;
+        gap: 0.5rem 0.2rem;
+        flex-direction: row;
+        justify-content: flex-start;
+        width: 100%;
+        flex-wrap: wrap;
+      }
+      .slider-and-value {
+        display: flex;
+        flex-direction: row;
+      }
+      .slider-value {
+        display: inline-block;
+        width: 2rem;
+      }
+      #apply-flame-sliders {
+        margin-top: 5rem;
+        margin-bottom: 0.6rem;
+      }
     </style>
   </head>
   <body>
@@ -72,38 +94,89 @@
     </div>
     <canvas id="renderCanvas" touch-action="none"></canvas>
     <div id="img-hash">Image hash: </div>
-<!--    6 sliders 2 columns -->
-    <button id="apply-emotion">Apply emotion</button>
-    <div class="sliders">
-      <div class="column">
-        <div class="slider">
-          <div>Happy</div>
-            <input type="range" min="0" max="1" value="0" step="0.01" id="happy"><span id="happy-value">val</span>
-        </div>
-        <div class="slider">
-          <div>Sad</div>
-            <input type="range" min="0" max="1" value="0" step="0.01" id="sad"><span id="sad-value">val</span>
-        </div>
-        <div class="slider">
-          <div>Fear</div>
-            <input type="range" min="0" max="1" value="0" step="0.01" id="fear"><span id="fear-value">val</span>
-        </div>
-        </div>
+    <div style="">
+      <button id="apply-emotion">Apply emotion</button>
+      <div class="sliders">
         <div class="column">
-        <div class="slider">
-          <div>Anger</div>
-            <input type="range" min="0" max="1" value="0" step="0.01" id="anger"><span id="anger-value">val</span>
-        </div>
-        <div class="slider">
-          <div>Surprise</div>
-            <input type="range" min="0" max="1" value="0" step="0.01" id="surprise"><span id="surprise-value">val</span>
-        </div>
-        <div class="slider">
-          <div>Disgust</div>
-            <input type="range" min="0" max="1" value="0" step="0.01" id="disgust"><span id="disgust-value">val</span>
-        </div>
-        </div>
+          <div class="slider">
+            <div>Happy</div>
+              <input type="range" min="0" max="1" value="0" step="0.01" id="happy"><span  class="slider-value"id="happy-value">val</span>
+          </div>
+          <div class="slider">
+            <div>Sad</div>
+              <input type="range" min="0" max="1" value="0" step="0.01" id="sad"><span class="slider-value" id="sad-value">val</span>
+          </div>
+          <div class="slider">
+            <div>Fear</div>
+              <input type="range" min="0" max="1" value="0" step="0.01" id="fear"><span class="slider-value" id="fear-value">val</span>
+          </div>
+          </div>
+          <div class="column">
+          <div class="slider">
+            <div>Anger</div>
+              <input type="range" min="0" max="1" value="0" step="0.01" id="anger"><span class="slider-value" id="anger-value">val</span>
+          </div>
+          <div class="slider">
+            <div>Surprise</div>
+              <input type="range" min="0" max="1" value="0" step="0.01" id="surprise"><span class="slider-value" id="surprise-value">val</span>
+          </div>
+          <div class="slider">
+            <div>Disgust</div>
+              <input type="range" min="0" max="1" value="0" step="0.01" id="disgust"><span class="slider-value" id="disgust-value">val</span>
+          </div>
+          </div>
+      </div>
+      <button id="apply-flame-sliders">Apply manual FLAME sliders</button>
+      <div class="exp-sliders sliders-style"></div>
+      <div class="pose-sliders sliders-style"></div>
+      <div class="neck-pose-sliders sliders-style"></div>
+      <div class="eye-pose-sliders sliders-style"></div>
     </div>
+    <script>
+      function populateSlider(num, name, label, altLabels = []) {
+        for (let i = 0; i < num; i++) {
+          const sliderNameLabel = document.createElement("div");
+          sliderNameLabel.innerHTML = altLabels[i] ??`${label} ${i+1}`;
+
+          const slider = document.createElement("input");
+          slider.type = "range";
+          slider.min = "-2";
+          slider.max = "2";
+          slider.value = "0";
+          slider.step = "0.01";
+          slider.id = `${name}_${i}`;
+
+          const sliderValueLabel = document.createElement("span");
+          sliderValueLabel.id = `${name}_${i}-value`;
+          sliderValueLabel.innerHTML = "0.00";
+          sliderValueLabel.style.width = "2rem";
+
+          const sliderAndValueDiv = document.createElement("div");
+          sliderAndValueDiv.className = "slider-and-value";
+          sliderAndValueDiv.appendChild(slider);
+          sliderAndValueDiv.appendChild(sliderValueLabel);
+
+
+          const sliderDiv = document.createElement("div");
+          sliderDiv.className = "slider";
+          sliderDiv.appendChild(sliderNameLabel);
+          sliderDiv.appendChild(sliderAndValueDiv);
+
+          sliderValueLabel.innerHTML = parseFloat(slider.value).toFixed(2);
+          slider.oninput = function () {
+            sliderValueLabel.innerHTML = parseFloat(this.value).toFixed(2);
+          };
+
+          document.querySelector(`.${name}-sliders`).appendChild(sliderDiv);
+        }
+      }
+
+      populateSlider(50, "exp", "Expression");
+      populateSlider(6, "pose", "Pose", ["Not used x", "Not used y", "Not used z", "Jaw up/down", "Jaw left/right", "Jaw twist left/right"]);
+      populateSlider(3, "neck-pose", "Neck", ["Neck up/down", "Neck left/right", "Neck twist left/right"]);
+      populateSlider(6, "eye-pose", "Eye (should not use)");
+
+    </script>
     <script>
       // Update span value when slider value is changed
         const happySlider = document.getElementById("happy");
@@ -187,6 +260,10 @@
         const engine = new BABYLON.Engine(canvas, true);
 
         const scene = new BABYLON.Scene(engine);
+        scene.imageProcessingConfiguration.toneMappingEnabled = true;
+        scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+        scene.imageProcessingConfiguration.contrast = 1.9;
+
         scene.useRightHandedSystem = true;
         if (!hasTouchScreen()) {
           scene.debugLayer.show();
@@ -214,7 +291,10 @@
           scene
         );
 
-        const myMaterial = new BABYLON.StandardMaterial("myMaterial", scene);
+        const myMaterial = new BABYLON.PBRMetallicRoughnessMaterial("myMaterial", scene);
+        myMaterial.backFaceCulling = false;
+        myMaterial.metallic = 0.0;
+        myMaterial.roughness = 0.6;
 
         function disposeScene() {
           console.log("disposeScene", root.getChildren());
@@ -283,6 +363,10 @@
         window.addEventListener("resize", function () {
           engine.resize();
         });
+
+        document.querySelector('canvas').addEventListener('wheel',function(event){
+          event.preventDefault();
+        }, false);
 
         let currentImgHash = null;
 
@@ -360,7 +444,13 @@
             e.target.value = null
           });
 
-        async function updateEmotion(emotionArr, imgHash) {
+        // flameModifiers is an object which can take:
+        // emotionArr : [0,1]x6
+        // expArr: [-inf, inf]x50
+        // poseArr: [-inf, inf]x6
+        // neckPoseArr: [-inf, inf]x3
+        // eyePoseArr: [-inf, inf]x6
+        async function updateFlameMesh(imgHash, flameModifiers) {
 
           const includeTexture = document.querySelector("input[type=checkbox]")
             .checked;
@@ -368,9 +458,9 @@
           const requestOptions = {
             method: "POST",
             body: JSON.stringify({
-              emotionArr: emotionArr,
-              imgHash: imgHash,
-              includeTex: includeTexture
+              imgHash,
+              includeTex: includeTexture,
+              ...flameModifiers,
             })
           };
 
@@ -410,7 +500,33 @@
             ].map((x) => parseFloat(x));
 
             if (currentImgHash != null) {
-              updateEmotion(emotionArr, currentImgHash);
+              updateFlameMesh(currentImgHash, {emotionArr});
+            }
+        });
+
+        document.querySelector("#apply-flame-sliders").addEventListener("click", () => {
+            const expArr = [];
+            for (let i = 0; i < 50; i++) {
+              expArr.push(parseFloat(document.getElementById("exp_" + i).value));
+            }
+
+            const poseArr = [];
+            for (let i = 0; i < 6; i++) {
+              poseArr.push(parseFloat(document.getElementById("pose_" + i).value));
+            }
+
+            const neckPoseArr = [];
+            for (let i = 0; i < 3; i++) {
+              neckPoseArr.push(parseFloat(document.getElementById("neck-pose_" + i).value));
+            }
+
+            const eyePoseArr = [];
+            for (let i = 0; i < 6; i++) {
+              eyePoseArr.push(parseFloat(document.getElementById("eye-pose_" + i).value));
+            }
+
+            if (currentImgHash != null) {
+              updateFlameMesh(currentImgHash, {expArr, poseArr, eyePoseArr, neckPoseArr});
             }
         });
       })();

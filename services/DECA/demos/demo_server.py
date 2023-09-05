@@ -31,7 +31,7 @@ def serve_process_string():
     img_hash = img_to_hash(img)
     cv2.imwrite(f'temp/{img_hash}.png', img)
 
-    resp = make_response(output_from_image(img, None, deca))
+    resp = make_response(output_from_image(img, deca))
     resp.headers.set('Image-Hash', img_hash)
 
     return resp
@@ -45,6 +45,11 @@ def get_face_with_updated_emotion():
 
     img_hash = content['imgHash']
     img = cv2.imread(f'temp/{img_hash}.png')
-    emotion_arr = content['emotionArr']
 
-    return output_from_image(img,emotion_arr,deca)
+    emotion_arr = content.get('emotionArr')
+    exp_arr = content.get('expArr')
+    pose_arr = content.get('poseArr')
+    neck_pose_arr = content.get('neckPoseArr')
+    eye_pose_arr = content.get('eyePoseArr')
+
+    return output_from_image(img,deca,emotion_arr=emotion_arr, exp_arr=exp_arr, pose_arr=pose_arr, neck_pose_arr=neck_pose_arr, eye_pose_arr=eye_pose_arr)
