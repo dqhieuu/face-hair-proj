@@ -394,7 +394,7 @@
               on:wheel|preventDefault></canvas>
     </div>
     <div
-      class="relative px-4 w-full rounded-t-xl mt-[77vh] overscroll-none bg-white drop-shadow-lg pb-4 md:mt-0 md:h-[100vh] md:overflow-auto md:w-[25rem]">
+      class="relative px-4 w-full rounded-t-xl mt-[77vh] overscroll-none bg-white pb-4 md:mt-0 md:h-[100vh] md:overflow-auto md:w-[25rem]">
       {#if isProcessing}
         <div
           class="absolute top-0 bottom-0 left-0 right-0 bg-blue-50/50 z-20 backdrop-blur-sm flex gap-2 items-center justify-center">

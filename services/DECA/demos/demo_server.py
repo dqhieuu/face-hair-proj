@@ -25,7 +25,13 @@ def serve_process_string():
     img_buffer = base64.b64decode(content['numpy_img'])
     img = np.frombuffer(img_buffer, dtype=np.uint8).reshape(content['numpy_shape'])
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (224, 224))
+    # image crop to center and resize to square of 224x224
+    h, w = img.shape[:2]
+    if h > w:
+        img = img[(h - w) // 2:(h + w) // 2, :, :]
+    else:
+        img = img[:, (w - h) // 2:(h + w) // 2, :]
+    img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_AREA)
 
 
     img_hash = img_to_hash(img)
