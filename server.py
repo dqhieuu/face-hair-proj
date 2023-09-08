@@ -7,6 +7,7 @@ import requests
 from PIL import Image, ImageOps
 from fastapi import FastAPI, UploadFile, Response, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing_extensions import Annotated
@@ -21,6 +22,8 @@ webapp.add_middleware(
     allow_headers=["*"],
     expose_headers=["Image-Hash"]
 )
+
+webapp.add_middleware(GZipMiddleware)
 
 
 @webapp.post("/upload")

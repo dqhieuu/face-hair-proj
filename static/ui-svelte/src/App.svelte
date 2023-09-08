@@ -394,7 +394,7 @@
               on:wheel|preventDefault></canvas>
     </div>
     <div
-      class="px-4 w-full rounded-t-xl mt-[77vh] overscroll-none bg-white drop-shadow-lg pb-4 md:mt-0 md:h-[100vh] md:overflow-auto md:w-[25rem]">
+      class="relative px-4 w-full rounded-t-xl mt-[77vh] overscroll-none bg-white drop-shadow-lg pb-4 md:mt-0 md:h-[100vh] md:overflow-auto md:w-[25rem]">
       {#if isProcessing}
         <div
           class="absolute top-0 bottom-0 left-0 right-0 bg-blue-50/50 z-20 backdrop-blur-sm flex gap-2 items-center justify-center">
@@ -423,7 +423,7 @@
             class="text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:text-gray-400 dark:border-gray-700 mb-2">
             <ul class="flex flex-wrap -mb-px">
               <li class="mr-2">
-                <a href="#"
+                <a href="#ez"
                    on:click|preventDefault={() => currentTab = 'ez'}
                    class="{
            currentTab === 'ez'
@@ -432,7 +432,7 @@
                 >EZ Mode</a>
               </li>
               <li class="mr-2">
-                <a href="#"
+                <a href="#emotions"
                    on:click|preventDefault={() => currentTab = 'emotions'}
                    class="{
            currentTab === 'emotions'
@@ -441,7 +441,7 @@
               </li>
               {#if showManualTab}
                 <li class="mr-2">
-                  <a href="#"
+                  <a href="#manual"
                      on:click|preventDefault={() => currentTab = 'manual'}
                      class="{
            currentTab === 'manual'
