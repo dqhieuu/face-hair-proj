@@ -134,46 +134,50 @@ def output_from_image(img: np.array, deca, emotion_arr=None, exp_arr=None, pose_
     # load test images
     testdata = datasets.TestData(tempfolder)
 
-    # for i in range(len(testdata)):
-    for i in tqdm(range(len(testdata))):
-        name = f"{testdata[i]['imagename']}_{time()}"
-        images = testdata[i]['image'].to(device)[None, ...]
-        with torch.no_grad():
-            codedict = deca.encode(images)
-            print(codedict)
-            opdict_pre_exp, visdict_pre_exp = deca.decode(codedict)
+    # for i in tqdm(range(len(testdata))):
+    name = f"{testdata[0]['imagename']}_{time()}"
+    images = testdata[0]['image'].to(device)[None, ...]
+    with torch.no_grad():
+        codedict = deca.encode(images)
+        opdict_pre_exp, visdict_pre_exp = deca.decode(codedict)
 
-            if emotion_arr is not None:
-                exp, pose = emotion_model(codedict['shape'], torch.tensor([emotion_arr]).to(device))
-                codedict['exp'] = exp
-                codedict['pose'][0:3] = pose[0:3] # only jaw pose
+        if emotion_arr is not None:
+            exp, pose = emotion_model(codedict['shape'], torch.tensor([emotion_arr]).to(device))
+            codedict['exp'] = exp
+            codedict['pose'][0:3] = pose[0:3] # only jaw pose
 
-            if exp_arr is not None:
-                codedict['exp'] = torch.tensor([exp_arr]).to(device)
+        if exp_arr is not None:
+            codedict['exp'] = torch.tensor([exp_arr]).to(device)
 
-            if pose_arr is not None:
-                codedict['pose'] = torch.tensor([pose_arr]).to(device)
+        if pose_arr is not None:
+            codedict['pose'] = torch.tensor([pose_arr]).to(device)
 
-            if neck_pose_arr is not None:
-                codedict['neck_pose'] = torch.tensor([neck_pose_arr]).to(device)
+        if neck_pose_arr is not None:
+            codedict['neck_pose'] = torch.tensor([neck_pose_arr]).to(device)
 
-            if eye_pose_arr is not None:
-                codedict['eye_pose'] = torch.tensor([eye_pose_arr]).to(device)
+        if eye_pose_arr is not None:
+            codedict['eye_pose'] = torch.tensor([eye_pose_arr]).to(device)
 
-            opdict, visdict = deca.decode(codedict)  # tensor
-            # correct uv mapping
-            opdict['uv_texture_gt'] = opdict_pre_exp['uv_texture_gt']
+        opdict, visdict = deca.decode(codedict)  # tensor
+        # correct uv mapping
+        opdict['uv_texture_gt'] = opdict_pre_exp['uv_texture_gt']
 
-            os.makedirs(os.path.join(savefolder, name), exist_ok=True)
-            deca.save_obj(os.path.join(savefolder, name, name + '.obj'), opdict)
-        print(os.path.join(savefolder, name, name + '.obj'))
-        # zip all files and return
-        shutil.make_archive(f'{savefolder}/{name}', 'zip', f'{savefolder}/{name}')
+        os.makedirs(os.path.join(savefolder, name), exist_ok=True)
+        deca.save_obj(os.path.join(savefolder, name, name + '.obj'), opdict)
+    print(os.path.join(savefolder, name, name + '.obj'))
+    # zip all files and return
+    shutil.make_archive(f'{savefolder}/{name}', 'zip', f'{savefolder}/{name}')
 
-        # read zip file and return data
-        with open(f'{savefolder}/{name}.zip', 'rb') as f:
-            data = f.read()
-            return data
+    shutil.rmtree(tempfolder)
+    shutil.rmtree(f'{savefolder}/{name}')
+
+    # read zip file and return data
+    with open(f'{savefolder}/{name}.zip', 'rb') as f:
+        data = f.read()
+
+    os.remove(f'{savefolder}/{name}.zip')
+
+    return data
 
 
 if __name__ == '__main__':

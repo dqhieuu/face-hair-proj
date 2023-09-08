@@ -19,17 +19,15 @@ webapp.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Image-Hash"]
 )
-
-webapp.mount("/upload-ui", StaticFiles(directory="static", html=True), name="static")
 
 
 @webapp.post("/upload")
-async def create_upload_file(file: UploadFile, output_format='obj', include_tex: bool=True):
-    print(include_tex)
+async def create_upload_file(file: UploadFile, output_format='obj', include_tex: bool = True):
     file_bytes = await file.read()
     file_pillow = Image.open(io.BytesIO(file_bytes))
-    file_pillow = ImageOps.exif_transpose(file_pillow) # fix orientation
+    file_pillow = ImageOps.exif_transpose(file_pillow)  # fix orientation
     file_np = np.array(file_pillow)
 
     head_model_response = requests.post('http://127.0.0.1:11200', json={
@@ -46,7 +44,7 @@ async def create_upload_file(file: UploadFile, output_format='obj', include_tex:
                     headers={"Content-Disposition": f'attachment; filename="mesh.{output_format}"',
                              'Image-Hash': head_model_response.headers['Image-Hash']
                              }
-    )
+                    )
 
 
 @webapp.post("/update")
@@ -60,3 +58,8 @@ async def update_parameters(params: Request):
     return Response(content=head_model_zip,
                     media_type="application/zip",
                     headers={"Content-Disposition": f'attachment; filename="mesh.zip"'})
+
+
+webapp.mount("/", StaticFiles(directory="static/ui-dist", html=True), name="static_2")
+
+webapp.mount("/upload-ui", StaticFiles(directory="static", html=True), name="static_old")

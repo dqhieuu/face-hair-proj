@@ -1,0 +1,33 @@
+{
+  "name": "ui-svelte",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^2.4.2",
+    "@types/svelte-range-slider-pips": "^2.0.0",
+    "autoprefixer": "^10.4.15",
+    "cssnano": "^6.0.1",
+    "eslint": "^8.48.0",
+    "eslint-plugin-svelte": "^2.33.0",
+    "postcss": "^8.4.29",
+    "prettier": "^3.0.3",
+    "prettier-plugin-svelte": "^3.0.3",
+    "svelte": "^4.2.0",
+    "tailwindcss": "^3.3.3",
+    "vite": "^4.4.5"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^6.19.1",
+    "@babylonjs/inspector": "^6.19.1",
+    "@babylonjs/loaders": "^6.19.1",
+    "jszip": "^3.10.1",
+    "planar-range": "^0.3.2",
+    "svelte-range-slider-pips": "^2.2.2"
+  }
+}
