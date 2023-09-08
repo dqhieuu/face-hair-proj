@@ -43,6 +43,7 @@
   let applyManualValuesFunc;
 
   let showManualTab = false;
+  let isProcessing = false;
 
   let mouthOpenness = [0];
   const mountOpennessInfo = {
@@ -247,6 +248,10 @@
     }
 
     async function processImage(imageFile) {
+      if (isProcessing) {
+        return;
+      }
+      isProcessing = true;
       const formData = new FormData();
       formData.append("file", imageFile);
 
@@ -256,8 +261,6 @@
           body: formData
         }).then((response) => {
         let imgHash = response.headers.get("Image-Hash");
-
-        console.log(imgHash, response.headers);
 
         currentImgHash = imgHash;
         return response.blob();
@@ -278,7 +281,9 @@
       }).catch(() => {
           // loadFile(blobUrl);
         }
-      );
+      ).finally(() => {
+        isProcessing = false;
+      });
     }
 
     // flameModifiers is an object which can take:
@@ -288,6 +293,11 @@
     // neckPoseArr: [-inf, inf]x3
     // eyePoseArr: [-inf, inf]x6
     async function updateFlameMesh(imgHash, flameModifiers) {
+      if (isProcessing) {
+        return;
+      }
+      isProcessing = true;
+
       const requestOptions = {
         method: "POST",
         body: JSON.stringify({
@@ -319,7 +329,9 @@
       }).catch(() => {
           // loadFile(blobUrl);
         }
-      );
+      ).finally(() => {
+        isProcessing = false;
+      });
     }
   });
 
@@ -383,6 +395,16 @@
     </div>
     <div
       class="px-4 w-full rounded-t-xl mt-[77vh] overscroll-none bg-white drop-shadow-lg pb-4 md:mt-0 md:h-[100vh] md:overflow-auto md:w-[25rem]">
+      {#if isProcessing}
+        <div
+          class="absolute top-0 bottom-0 left-0 right-0 bg-blue-50/50 z-20 backdrop-blur-sm flex gap-2 items-center justify-center">
+          <div
+            class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+            role="status">
+          </div>
+          <div>Processing...</div>
+        </div>
+      {/if}
       <div class="sticky z-10 pt-4 top-0 bg-white">
         <label for="myFile"
                class=" block bg-blue-500 hover:bg-blue-700 text-white font-bold text-2xl mb-3 py-5 rounded left-0 right-0 text-center cursor-pointer">
