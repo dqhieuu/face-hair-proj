@@ -85,6 +85,7 @@
 
     scene.useRightHandedSystem = true;
 
+    const backendUrl = import.meta.env.PROD ? import.meta.env.BASE_URL : "http://localhost:8000/";
 
     const rootNode = new Mesh("root", scene);
 
@@ -256,7 +257,7 @@
       formData.append("file", imageFile);
 
       const blob = await fetch(//http://192.168.1.29:8001/ or http://localhost:8000/
-        `/upload?include_tex=${includeTexture}`, {
+        `${backendUrl}upload?include_tex=${includeTexture}`, {
           method: "POST",
           body: formData
         }).then((response) => {
@@ -308,7 +309,7 @@
       };
 
       const blob = await fetch(
-        "/update",
+        `${backendUrl}update`,
         requestOptions
       ).then((response) => {
         return response.blob();
