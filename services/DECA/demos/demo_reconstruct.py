@@ -12,7 +12,7 @@
 #
 # For comments or questions, please email us at deca@tue.mpg.de
 # For commercial licensing contact, please contact ps-license@tuebingen.mpg.de
-
+import json
 import os, sys
 import shutil
 
@@ -31,17 +31,21 @@ from decalib.utils import util
 from decalib.utils.config import cfg as deca_cfg
 from decalib.utils.tensor_cropper import transform_points
 
+
 def emotion_code_to_input_tensor(emotion_code: int):
     emotion_arr = np.zeros(6).astype(np.float32)
     if emotion_code >= 2:
         emotion_arr[emotion_code - 2] = 1.0
     return torch.tensor([emotion_arr]).to('cuda')
 
+
 def emotion_code_to_meaning(emotion_code: int):
     return ['neutral', 'happy', 'sad', 'fear', 'anger', 'surprise', 'disgust'][emotion_code - 1]
 
+
 from decalib.emotion_net import get_emotion_model
 emotion_model = get_emotion_model()
+
 
 def main(args):
     # if args.rasterizer_type != 'standard':
@@ -61,7 +65,7 @@ def main(args):
     deca = DECA(config=deca_cfg, device=device)
     # for i in range(len(testdata)):
     for i in tqdm(range(len(testdata))):
-        for emo_code in range (1, 8):
+        for emo_code in range(1, 8):
             name = testdata[i]['imagename']
             images = testdata[i]['image'].to(device)[None, ...]
             with torch.no_grad():
@@ -76,7 +80,8 @@ def main(args):
                     tform = testdata[i]['tform'][None, ...]
                     tform = torch.inverse(tform).transpose(1, 2).to(device)
                     original_image = testdata[i]['original_image'][None, ...].to(device)
-                    _, orig_visdict = deca.decode(codedict, render_orig=True, original_image=original_image, tform=tform)
+                    _, orig_visdict = deca.decode(codedict, render_orig=True, original_image=original_image,
+                                                  tform=tform)
                     orig_visdict['inputs'] = original_image
 
             if args.saveDepth or args.saveKpt or args.saveObj or args.saveMat or args.saveImages:
@@ -90,7 +95,8 @@ def main(args):
                 np.savetxt(os.path.join(savefolder, name, name + '_kpt2d.txt'), opdict['landmarks2d'][0].cpu().numpy())
                 np.savetxt(os.path.join(savefolder, name, name + '_kpt3d.txt'), opdict['landmarks3d'][0].cpu().numpy())
             if args.saveObj:
-                deca.save_obj(os.path.join(savefolder, name, name + f'_emo_{emotion_code_to_meaning(emo_code)}' + '.obj'), opdict)
+                deca.save_obj(
+                    os.path.join(savefolder, name, name + f'_emo_{emotion_code_to_meaning(emo_code)}' + '.obj'), opdict)
             if args.saveMat:
                 opdict = util.dict_tensor2npy(opdict)
                 savemat(os.path.join(savefolder, name, name + '.mat'), opdict)
@@ -123,7 +129,9 @@ def init_my_deca():
     os.makedirs(savefolder, exist_ok=True)
     return DECA(config=deca_cfg, device=device)
 
-def output_from_image(img: np.array, deca, emotion_arr=None, exp_arr=None, pose_arr=None, neck_pose_arr=None, eye_pose_arr=None):
+
+def output_from_image(img: np.array, deca, no_detect_pose=True, emotion_arr=None, exp_arr=None, pose_arr=None,
+                      neck_pose_arr=None, eye_pose_arr=None):
     device = 'cuda'
     savefolder = 'output'
     tempfolder = f'temp/{time()}'
@@ -141,10 +149,14 @@ def output_from_image(img: np.array, deca, emotion_arr=None, exp_arr=None, pose_
         codedict = deca.encode(images)
         opdict_pre_exp, visdict_pre_exp = deca.decode(codedict)
 
+        if no_detect_pose:
+            codedict['pose'] = torch.tensor([[0.0] * 6]).to(device)
+            codedict['exp'] = torch.tensor([[0.0] * 50]).to(device)
+
         if emotion_arr is not None:
             exp, pose = emotion_model(codedict['shape'], torch.tensor([emotion_arr]).to(device))
             codedict['exp'] = exp
-            codedict['pose'][0:3] = pose[0:3] # only jaw pose
+            codedict['pose'][0:3] = pose[0:3]  # only jaw pose
 
         if exp_arr is not None:
             codedict['exp'] = torch.tensor([exp_arr]).to(device)
@@ -165,16 +177,40 @@ def output_from_image(img: np.array, deca, emotion_arr=None, exp_arr=None, pose_
         os.makedirs(os.path.join(savefolder, name), exist_ok=True)
         deca.save_obj(os.path.join(savefolder, name, name + '.obj'), opdict)
     print(os.path.join(savefolder, name, name + '.obj'))
+
+    verts = opdict['verts'][0].cpu().numpy().tolist()
+    metadata = {
+        'lips': {
+            'upper': {
+                'center': verts[3543],
+                'left': verts[2830],
+                'right': verts[1713]
+            },
+            'lower': {
+                'center': verts[3506],
+                'left': verts[2713],
+                'right': verts[1773]
+            }
+        }
+    }
+
+    # save metadata variable to savefolder/metadata.json
+    with open(os.path.join(savefolder, name, 'metadata.json'), 'w') as f:
+        json.dump(metadata, f)
+
+    # copy teeth.glb to savefolder
+    shutil.copy('my_data/teeth.glb', os.path.join(savefolder, name, 'teeth.glb'))
+
     # zip all files and return
     shutil.make_archive(f'{savefolder}/{name}', 'zip', f'{savefolder}/{name}')
-
-    shutil.rmtree(tempfolder)
-    shutil.rmtree(f'{savefolder}/{name}')
 
     # read zip file and return data
     with open(f'{savefolder}/{name}.zip', 'rb') as f:
         data = f.read()
 
+    # remove temp folders and zip file
+    shutil.rmtree(tempfolder)
+    shutil.rmtree(f'{savefolder}/{name}')
     os.remove(f'{savefolder}/{name}.zip')
 
     return data

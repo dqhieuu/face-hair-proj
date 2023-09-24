@@ -1,12 +1,14 @@
 <script lang="ts">
   import {
-    ArcRotateCamera,
+    AbstractMesh,
+    ArcRotateCamera, Axis,
     Engine,
-    HemisphericLight, ImageProcessingConfiguration,
+    HemisphericLight,
+    ImageProcessingConfiguration,
     Mesh,
     PBRMetallicRoughnessMaterial,
     Scene,
-    SceneLoader,
+    SceneLoader, Space,
     Vector3
   } from "@babylonjs/core";
   import { MTLFileLoader, OBJFileLoader } from "@babylonjs/loaders/OBJ";
@@ -70,6 +72,18 @@
     neckPoseArr[1] = (lookDirection[0] * 2 - 1) * 0.7;
   }
 
+  let showFaceTexture = true;
+
+  let headNode: AbstractMesh | null;
+
+  $:if (headNode) {
+    headNode.useVertexColors = showFaceTexture;
+  }
+
+  const isProduction = import.meta.env.PROD;
+  const backendUrl = isProduction ? import.meta.env.BASE_URL : "http://localhost:8000/";
+
+
   onMount(async () => {
     OBJFileLoader.COMPUTE_NORMALS = true;
     OBJFileLoader.OPTIMIZE_WITH_UV = true;
@@ -84,8 +98,6 @@
     scene.imageProcessingConfiguration.contrast = 1.9;
 
     scene.useRightHandedSystem = true;
-
-    const backendUrl = import.meta.env.PROD ? import.meta.env.BASE_URL : "http://localhost:8000/";
 
     const rootNode = new Mesh("root", scene);
 
@@ -152,12 +164,17 @@
       }
     });
 
-    document.body.addEventListener("click", nClicks(3, 400)(() => { // double click
-      if (!hasTouchScreen()) {
+    function loadDevFeatures() {
+      if (!isSmallScreenDevice()) {
         Inspector.Show(scene, {});
       }
       showManualTab = true;
-    }));
+    }
+
+    document.body.addEventListener("click", nClicks(3, 400)(loadDevFeatures));
+    if (!isProduction) {
+      loadDevFeatures();
+    }
 
     // Click upload
     onSelectUploadFile = async (e) => {
@@ -229,6 +246,7 @@
           ".obj"
         ).then((result) => {
           result.meshes.forEach((mesh) => {
+            headNode = mesh;
             mesh.parent = rootNode;
             mesh.material = myMaterial;
           });
@@ -245,6 +263,66 @@
 
       } else if (name.endsWith(".png")) {
         // myMaterial._albedoTexture = new Texture(url, scene, undefined, false);
+      } else if (name === "metadata.json") {
+        const metadata = await fetch(url).then((response) => response.json());
+
+        const jawUpper = scene.getNodeByName("jaw_up") as Mesh | null;
+        const jawLower = scene.getNodeByName("jaw_down") as Mesh | null;
+        if (jawUpper && jawLower) {
+          jawUpper.position = new Vector3(...metadata.lips.upper.center);
+          jawLower.position = new Vector3(...metadata.lips.lower.center);
+
+          jawUpper.translate(Axis.Z, -0.025, Space.LOCAL);
+          jawLower.translate(Axis.Z, -0.025, Space.LOCAL);
+          jawUpper.translate(Axis.Y, -0.015, Space.LOCAL);
+          jawLower.translate(Axis.Y, 0.015, Space.LOCAL);
+
+          jawUpper.rotation = new Vector3(0, -Math.PI / 2, 0);
+          jawLower.rotation = new Vector3(0, -Math.PI / 2, 0);
+
+          jawLower.scaling = jawUpper.scaling = new Vector3(0.01, 0.01, 0.014);
+        }
+
+        console.log(metadata);
+      } else if (name === "teeth.glb") {
+        // const result = await SceneLoader.ImportMeshAsync(
+        //   "",
+        //   url,
+        //   undefined,
+        //   undefined,
+        //   undefined,
+        //   ".glb"
+        // );
+        // result.meshes.forEach((mesh) => {
+        //   mesh.parent = rootNode;
+        // });
+      }
+    }
+
+    async function processZipBlob(blob: Blob) {
+      const zip = new JSZip();
+
+      const deferredFunctions = [];
+      const zipPromises = [];
+      const zipFiles = await zip.loadAsync(blob);
+
+      zipFiles.forEach((relativePath, zipEntry) => {
+        console.log(relativePath);
+        const result = zipEntry.async("blob").then((blob) => {
+          const blobUrl = URL.createObjectURL(blob);
+          if (relativePath === "metadata.json") {
+            deferredFunctions.push(() => loadFileByName(blobUrl, relativePath));
+          } else {
+            loadFileByName(blobUrl, relativePath);
+          }
+        });
+        zipPromises.push(result);
+      });
+
+      await Promise.all(zipPromises);
+
+      for await (const func of deferredFunctions) {
+        await func();
       }
     }
 
@@ -261,30 +339,15 @@
           method: "POST",
           body: formData
         }).then((response) => {
-        let imgHash = response.headers.get("Image-Hash");
-
-        currentImgHash = imgHash;
+        currentImgHash = response.headers.get("Image-Hash");
         return response.blob();
       });
 
       disposeScene();
 
-      const zip = new JSZip();
+      await processZipBlob(blob);
 
-      zip.loadAsync(blob).then((zip) => {
-        zip.forEach((relativePath, zipEntry) => {
-          console.log(relativePath);
-          zipEntry.async("blob").then((blob) => {
-            const blobUrl = URL.createObjectURL(blob);
-            loadFileByName(blobUrl, relativePath);
-          });
-        });
-      }).catch(() => {
-          // loadFile(blobUrl);
-        }
-      ).finally(() => {
-        isProcessing = false;
-      });
+      isProcessing = false;
     }
 
     // flameModifiers is an object which can take:
@@ -317,22 +380,9 @@
 
       disposeScene();
 
-      const zip = new JSZip();
+      await processZipBlob(blob);
 
-      zip.loadAsync(blob).then((zip) => {
-        zip.forEach((relativePath, zipEntry) => {
-          console.log(relativePath);
-          zipEntry.async("blob").then((blob) => {
-            const blobUrl = URL.createObjectURL(blob);
-            loadFileByName(blobUrl, relativePath);
-          });
-        });
-      }).catch(() => {
-          // loadFile(blobUrl);
-        }
-      ).finally(() => {
-        isProcessing = false;
-      });
+      isProcessing = false;
     }
   });
 
@@ -354,8 +404,8 @@
     lookDirection = [0.5, 0.5];
   }
 
-  function hasTouchScreen() {
-    return ("ontouchstart" in window) || (navigator.maxTouchPoints > 0);
+  function isSmallScreenDevice() {
+    return window.innerWidth < 960;
   }
 
   const nClicks = (minClickStreak, maxClickInterval = 500, resetImmediately = true) => {
@@ -388,14 +438,14 @@
   window.scrollTo(0, document.body.scrollHeight);
 </script>
 
-<main>
+<main class="dark:text-slate-200">
   <div class="flex flex-col md:flex-row">
     <div class="flex-1 fixed md:static top-0 left-0 max-h-[100vh]">
       <canvas bind:this={canvas} class="touch-none w-[100vw] h-[80vh] z-10 md:w-full md:h-[100vh]"
               on:wheel|preventDefault></canvas>
     </div>
     <div
-      class="relative px-4 w-full rounded-t-xl mt-[77vh] overscroll-none bg-white pb-4 md:mt-0 md:h-[100vh] md:overflow-auto md:w-[25rem]">
+      class="relative px-4 w-full rounded-t-xl mt-[77vh] overscroll-none bg-white pb-4 md:mt-0 md:h-[100vh] md:overflow-auto md:w-[25rem] md:rounded-t-none dark:bg-gray-700">
       {#if isProcessing}
         <div
           class="absolute top-0 bottom-0 left-0 right-0 bg-blue-50/50 z-20 backdrop-blur-sm flex gap-2 items-center justify-center">
@@ -406,30 +456,30 @@
           <div>Processing...</div>
         </div>
       {/if}
-      <div class="sticky z-10 pt-4 top-0 bg-white">
+      <div class="sticky z-10 pt-4 top-0 bg-white dark:bg-gray-700">
         <label for="myFile"
-               class=" block bg-blue-500 hover:bg-blue-700 text-white font-bold text-2xl mb-3 py-5 rounded left-0 right-0 text-center cursor-pointer">
+               class=" block bg-blue-500 hover:bg-blue-700 text-slate-100 font-bold text-2xl mb-3 py-5 rounded left-0 right-0 text-center cursor-pointer">
           Upload your portrait...</label>
         <input class="hidden" type="file" id="myFile" accept="image/*" on:change={onSelectUploadFile} />
 
         <div class="flex items-center my-2">
           <input id="checked-checkbox" type="checkbox" bind:checked={includeTexture}
-                 class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-          <label for="checked-checkbox" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">Create a 3D
+                 class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
+          <label for="checked-checkbox" class="ml-2 text-sm font-medium text-gray-900 dark:text-slate-200 cursor-pointer">Create a 3D
             face texture with your portrait</label>
         </div>
 
-        {#if currentImgHash != null}
+        {#if currentImgHash != null || true}
           <div
-            class="text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:text-gray-400 dark:border-gray-700 mb-2">
+            class="text-sm font-medium text-center text-gray-500 border-b border-gray-200 mb-2">
             <ul class="flex flex-wrap -mb-px">
               <li class="mr-2">
                 <a href="#ez"
                    on:click|preventDefault={() => currentTab = 'ez'}
                    class="{
            currentTab === 'ez'
-           ? 'inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active dark:text-blue-500 dark:border-blue-500'
-           : 'inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}"
+           ? 'inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active dark:text-slate-200 dark:border-blue-600'
+           : 'inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 dark:text-gray-400'}"
                 >EZ Mode</a>
               </li>
               <li class="mr-2">
@@ -437,8 +487,8 @@
                    on:click|preventDefault={() => currentTab = 'emotions'}
                    class="{
            currentTab === 'emotions'
-           ? 'inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active dark:text-blue-500 dark:border-blue-500'
-           : 'inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}">Emotions</a>
+           ? 'inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active dark:text-slate-200 dark:border-blue-600'
+           : 'inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 dark:text-gray-400'}">Emotions</a>
               </li>
               {#if showManualTab}
                 <li class="mr-2">
@@ -446,8 +496,8 @@
                      on:click|preventDefault={() => currentTab = 'manual'}
                      class="{
            currentTab === 'manual'
-           ? 'inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active dark:text-blue-500 dark:border-blue-500'
-           : 'inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'}"
+           ? 'inline-block p-4 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active dark:text-slate-200 dark:border-blue-600'
+           : 'inline-block p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 dark:text-gray-400'}"
                   >Manual</a>
                 </li>
               {/if}
@@ -455,7 +505,7 @@
           </div>
           <button
             on:click|preventDefault={resetConfigParams}
-            class="absolute right-1 bottom-4 bg-transparent hover:bg-red-500 text-red-600 text-xs hover:text-white py-1 px-1 border border-red-500 hover:border-transparent rounded transition">
+            class="absolute right-1 bottom-4 bg-transparent hover:bg-red-500 text-red-600 text-xs hover:text-white py-1 px-1 border border-red-500 hover:border-transparent rounded transition dark:text-red-400 dark:border-red-400">
             Reset
           </button>
         {/if}
@@ -463,7 +513,7 @@
       </div>
 
 
-      {#if currentImgHash != null}
+      {#if currentImgHash != null || true}
         <div class="flex flex-col gap-2">
           {#if currentTab === 'emotions'}
             <div class="flex w-full justify-around flex-wrap gap-2">
@@ -513,7 +563,7 @@
               </div>
             </div>
             <div class="flex flex-col items-center">
-              <div class="font-bold">Look direction</div>
+              <div class="font-bold">Head pose</div>
               <div class="flex flex-col items-center">
                 Up
                 <div class="flex gap-1 items-center">
@@ -535,7 +585,13 @@
             <button class="simple-button" on:click={applyManualValuesFunc}>Apply expression</button>
           {:else if currentTab === 'manual'}
             <button class="simple-button" on:click={applyManualValuesFunc}>Apply manual FLAME sliders</button>
-            <div class="flex flex-col gap-5">
+            <label class="relative inline-flex items-center cursor-pointer my-2">
+              <input type="checkbox" bind:checked="{showFaceTexture}" class="sr-only peer">
+              <div
+                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300 ">Show face texture</span>
+            </label>
+            <div class="flex flex-col gap-8">
               <div class="flex gap-2 flex-wrap justify-around">
                 {#each expArr as value, i}
                   <div class="w-[10rem]">
@@ -583,15 +639,21 @@
 
 <style lang="postcss">
     .range-slider {
-        @apply w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700;
+        @apply w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer;
     }
 
     .simple-button {
         @apply px-5 py-2.5 font-medium bg-blue-50 hover:bg-blue-100 hover:text-blue-600 text-blue-500 rounded-lg text-sm
+        dark:bg-slate-500 dark:hover:bg-slate-600 dark:text-gray-200 dark:hover:text-gray-100;
     }
 
     :global(.rangePips.vertical .pipVal) {
+
         transform: translate(0.5rem, -50%) !important;
+    }
+
+    :global(.rangePips .pipVal) {
+        @apply dark:text-slate-200;
     }
 
     planar-range {

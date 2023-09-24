@@ -37,7 +37,9 @@ def serve_process_string():
     img_hash = img_to_hash(img)
     cv2.imwrite(f'temp/{img_hash}.png', img)
 
-    resp = make_response(output_from_image(img, deca))
+    with_pose = content.get('with_pose', False)
+
+    resp = make_response(output_from_image(img, deca, no_detect_pose=not with_pose))
     resp.headers.set('Image-Hash', img_hash)
 
     return resp

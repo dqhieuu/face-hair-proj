@@ -1,0 +1,7 @@
+upper lip center index: 3543
+upper lip left corner index: 2830
+upper lip right corner index: 1713
+
+lower lip center index: 3506
+lower lip left corner index: 2713
+lower lip right corner index: 1773
