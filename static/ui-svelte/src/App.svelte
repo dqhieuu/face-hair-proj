@@ -83,6 +83,8 @@
   const isProduction = import.meta.env.PROD;
   const backendUrl = isProduction ? import.meta.env.BASE_URL : "http://localhost:8000/";
 
+  let currentMeshZipBlob: Blob | null = null;
+
 
   onMount(async () => {
     OBJFileLoader.COMPUTE_NORMALS = true;
@@ -343,6 +345,8 @@
         return response.blob();
       });
 
+      currentMeshZipBlob = blob;
+
       disposeScene();
 
       await processZipBlob(blob);
@@ -377,6 +381,8 @@
       ).then((response) => {
         return response.blob();
       });
+
+      currentMeshZipBlob = blob;
 
       disposeScene();
 
@@ -440,9 +446,19 @@
 
 <main class="dark:text-slate-200">
   <div class="flex flex-col md:flex-row">
-    <div class="flex-1 fixed md:static top-0 left-0 max-h-[100vh]">
-      <canvas bind:this={canvas} class="touch-none w-[100vw] h-[80vh] z-10 md:w-full md:h-[100vh]"
-              on:wheel|preventDefault></canvas>
+    <div class="flex-1 fixed md:relative top-0 left-0 max-h-[100vh]">
+      <!-- download button  -->
+      {#if currentMeshZipBlob != null}
+        <div class="absolute top-3 left-1/2 mx-auto z-10 translate-x-[-6rem]">
+          <a href={URL.createObjectURL(currentMeshZipBlob)}
+             class="bg-blue-500/20 backdrop-blur-lg hover:bg-blue-500/50 ease-in-out duration-150 text-slate-100 hover:text-slate-100 w-[12rem] block text-lg p-2 rounded text-center cursor-pointer"
+             download="model.zip">Download model</a>
+        </div>
+      {/if}
+      <div class="test">
+        <canvas bind:this={canvas} class="touch-none w-[100vw] h-[80vh] z-10 md:w-full md:h-[100vh]"
+                on:wheel|preventDefault />
+      </div>
     </div>
     <div
       class="relative px-4 w-full rounded-t-xl mt-[77vh] overscroll-none bg-white pb-4 md:mt-0 md:h-[100vh] md:overflow-auto md:w-[25rem] md:rounded-t-none dark:bg-gray-700">
@@ -465,13 +481,14 @@
         <div class="flex items-center my-2">
           <input id="checked-checkbox" type="checkbox" bind:checked={includeTexture}
                  class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
-          <label for="checked-checkbox" class="ml-2 text-sm font-medium text-gray-900 dark:text-slate-200 cursor-pointer">Create a 3D
+          <label for="checked-checkbox"
+                 class="ml-2 text-sm font-medium text-gray-900 dark:text-slate-200 cursor-pointer">Create a 3D
             face texture with your portrait</label>
         </div>
 
-        {#if currentImgHash != null || true}
+        {#if currentImgHash != null }
           <div
-            class="text-sm font-medium text-center text-gray-500 border-b border-gray-200 mb-2">
+            class="text-sm font-medium text-center text-gray-500 border-b border-gray-200 mb-2 -mx-4">
             <ul class="flex flex-wrap -mb-px">
               <li class="mr-2">
                 <a href="#ez"
@@ -513,7 +530,7 @@
       </div>
 
 
-      {#if currentImgHash != null || true}
+      {#if currentImgHash != null }
         <div class="flex flex-col gap-2">
           {#if currentTab === 'emotions'}
             <div class="flex w-full justify-around flex-wrap gap-2">
@@ -550,6 +567,12 @@
             </div>
             <button class="simple-button" on:click={applyEmotionFunc}>Apply emotions</button>
           {:else if currentTab === 'ez'}
+            <label class="relative inline-flex items-center cursor-pointer my-2">
+              <input type="checkbox" bind:checked="{showFaceTexture}" class="sr-only peer">
+              <div
+                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300 ">Show face texture</span>
+            </label>
             <div class="flex gap-32">
               <div>
                 <div class="font-bold">Mouth</div>
@@ -667,5 +690,20 @@
     planar-range-thumb {
         width: 1.5rem;
         height: 1.5rem;
+    }
+
+    ::-webkit-scrollbar-track {
+        background-color: #d2d2d2;
+    }
+
+    ::-webkit-scrollbar {
+        width: 0.5rem;
+        background-color: #F5F5F5;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: #4b4b4b;
+        border: 2px solid #555555;
+        border-radius: 200px;
     }
 </style>
