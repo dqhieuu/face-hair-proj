@@ -110,14 +110,18 @@
       0.5,
       new Vector3(0, 0, 0)
     );
-    camera.attachControl(canvas, true);
     camera.minZ = 0.1;
+    camera.attachControl(canvas, true);
     camera.wheelPrecision = 300;
     camera.pinchPrecision = 500;
     camera.panningSensibility = 1000;
     camera.panningInertia = 0.3;
-    camera.lowerRadiusLimit = 0.4;
-    camera.upperRadiusLimit = 1.2;
+
+    if (isProduction) {
+      camera.lowerRadiusLimit = 0.4;
+      camera.upperRadiusLimit = 1.2;
+    }
+
 
     // the variable isn't used, but it will make the light appear in the scene
     const light = new HemisphericLight(
@@ -249,6 +253,7 @@
         ).then((result) => {
           result.meshes.forEach((mesh) => {
             headNode = mesh;
+            mesh.name = "head";
             mesh.parent = rootNode;
             mesh.material = myMaterial;
           });
@@ -285,6 +290,15 @@
           jawLower.scaling = jawUpper.scaling = new Vector3(0.01, 0.01, 0.014);
         }
 
+        const hair = scene.getNodeByName("hair") as Mesh | null;
+        if (hair) {
+          hair.position = new Vector3(...metadata.hair_translation);
+        }
+        const hairContainer = scene.getNodeByName("hair_container") as Mesh | null;
+        if (hairContainer) {
+          hairContainer.scaling = new Vector3(...metadata.hair_scale);
+        }
+
         console.log(metadata);
       } else if (name === "teeth.glb") {
         // const result = await SceneLoader.ImportMeshAsync(
@@ -298,6 +312,23 @@
         // result.meshes.forEach((mesh) => {
         //   mesh.parent = rootNode;
         // });
+      } else if (name === "hair.obj") {
+        const result = await SceneLoader.ImportMeshAsync(
+          "",
+          url,
+          undefined,
+          undefined,
+          undefined,
+          ".obj"
+        );
+        const hairContainer = new Mesh("hair_container", scene);
+        hairContainer.parent = rootNode;
+
+        result.meshes.forEach((mesh) => {
+          mesh.parent = hairContainer;
+          mesh.name = "hair";
+          mesh.visibility = 0.8;
+        });
       }
     }
 
@@ -455,7 +486,7 @@
              download="model.zip">Download model</a>
         </div>
       {/if}
-      <div class="test">
+      <div class="test max-h-[100vh]">
         <canvas bind:this={canvas} class="touch-none w-[100vw] h-[80vh] z-10 md:w-full md:h-[100vh]"
                 on:wheel|preventDefault />
       </div>
@@ -671,7 +702,6 @@
     }
 
     :global(.rangePips.vertical .pipVal) {
-
         transform: translate(0.5rem, -50%) !important;
     }
 

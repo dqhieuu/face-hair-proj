@@ -179,6 +179,39 @@ def output_from_image(img: np.array, deca, no_detect_pose=True, emotion_arr=None
     print(os.path.join(savefolder, name, name + '.obj'))
 
     verts = opdict['verts'][0].cpu().numpy().tolist()
+
+    five_perc_points_highest_z_head = sorted(verts, key=lambda x: x[1])[-int(len(verts) * 0.05):]
+    mean_x_head = sum([v[0] for v in five_perc_points_highest_z_head]) / len(five_perc_points_highest_z_head)
+    mean_y_head = sum([v[2] for v in five_perc_points_highest_z_head]) / len(five_perc_points_highest_z_head)
+    highest_z_head = max(five_perc_points_highest_z_head, key=lambda x: x[1])[1]
+
+    # read file with trimesh
+    import trimesh
+    mesh = trimesh.load('my_data/hair/emma.obj')
+
+    five_perc_points_highest_z_hair = sorted(mesh.vertices, key=lambda x: x[1])[-int(len(mesh.vertices) * 0.05):]
+    mean_x_hair = sum([v[0] for v in five_perc_points_highest_z_hair]) / len(five_perc_points_highest_z_hair)
+    mean_y_hair = sum([v[2] for v in five_perc_points_highest_z_hair]) / len(five_perc_points_highest_z_hair)
+    highest_z_hair = max(five_perc_points_highest_z_hair, key=lambda x: x[1])[1]
+
+    hair_calibration = [0, 0.08, 0]
+    hair_translation = [mean_x_head - mean_x_hair + hair_calibration[0],
+                        highest_z_head - highest_z_hair + hair_calibration[1],
+                        mean_y_head - mean_y_hair + hair_calibration[2]
+                        ]
+
+    five_perc_points_highest_z_hair = sorted(mesh.vertices, key=lambda x: x[1])[-int(len(mesh.vertices) * 0.10):]
+    leftmost_x_hair = min(five_perc_points_highest_z_hair, key=lambda x: x[0])[0]
+    rightmost_x_hair = max(five_perc_points_highest_z_hair, key=lambda x: x[0])[0]
+    width_hair = rightmost_x_hair - leftmost_x_hair
+
+    leftmost_head = verts[3039]
+    rightmost_head = verts[806]
+    width_head = np.linalg.norm(np.array(leftmost_head) - np.array(rightmost_head))
+
+    ratio_calibration = 0.05
+    head_to_hair_ratio = width_head / width_hair + ratio_calibration
+
     metadata = {
         'lips': {
             'upper': {
@@ -191,7 +224,9 @@ def output_from_image(img: np.array, deca, no_detect_pose=True, emotion_arr=None
                 'left': verts[2713],
                 'right': verts[1773]
             }
-        }
+        },
+        'hair_translation': hair_translation,
+        'hair_scale': [head_to_hair_ratio] * 3,
     }
 
     # save metadata variable to savefolder/metadata.json
@@ -200,6 +235,9 @@ def output_from_image(img: np.array, deca, no_detect_pose=True, emotion_arr=None
 
     # copy teeth.glb to savefolder
     shutil.copy('my_data/teeth.glb', os.path.join(savefolder, name, 'teeth.glb'))
+
+    # copy hair emma.obj to savefolder
+    shutil.copy('my_data/hair/emma.obj', os.path.join(savefolder, name, 'hair.obj'))
 
     # zip all files and return
     shutil.make_archive(f'{savefolder}/{name}', 'zip', f'{savefolder}/{name}')

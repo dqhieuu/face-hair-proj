@@ -14,4 +14,5 @@ yacs==0.1.8
 kornia==0.4.0
 ninja
 fvcore
-# pytorch3d    
+# pytorch3d
+trimesh==3.23.5
