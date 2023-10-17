@@ -1,7 +1,7 @@
 <script lang="ts">
   import {
     AbstractMesh,
-    ArcRotateCamera, Axis,
+    ArcRotateCamera, Axis, Color3,
     Engine,
     HemisphericLight,
     ImageProcessingConfiguration,
@@ -85,6 +85,21 @@
 
   let currentMeshZipBlob: Blob | null = null;
 
+  let hairMaterial: PBRMetallicRoughnessMaterial | null = null;
+
+  const hexColorToRGBNormalized = (hexColor: string) => {
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16) / 255;
+    const g = parseInt(hex.substring(2, 4), 16) / 255;
+    const b = parseInt(hex.substring(4, 6), 16) / 255;
+    return new Color3(r, g, b);
+  }
+
+  let hairColor = '#858585';
+  $: if (hairMaterial) {
+    hairMaterial._albedoColor = hexColorToRGBNormalized(hairColor);
+  }
+
 
   onMount(async () => {
     OBJFileLoader.COMPUTE_NORMALS = true;
@@ -130,10 +145,15 @@
       scene
     );
 
-    const myMaterial = new PBRMetallicRoughnessMaterial("myMaterial", scene);
-    myMaterial.backFaceCulling = false;
-    myMaterial.metallic = 0.0;
-    myMaterial.roughness = 0.6;
+    const headMaterial = new PBRMetallicRoughnessMaterial("headMaterial", scene);
+    headMaterial.backFaceCulling = false;
+    headMaterial.metallic = 0.0;
+    headMaterial.roughness = 0.6;
+
+    hairMaterial = new PBRMetallicRoughnessMaterial("hairMaterial", scene);
+    hairMaterial.metallic = 0.0;
+    hairMaterial.roughness = 0.3;
+    hairMaterial._albedoColor = new Color3(1.0, 0.8, 0.6);
 
     engine.runRenderLoop(function() {
       scene.render();
@@ -255,7 +275,7 @@
             headNode = mesh;
             mesh.name = "head";
             mesh.parent = rootNode;
-            mesh.material = myMaterial;
+            mesh.material = headMaterial;
           });
         });
       } else if (name.endsWith(".mtl")) {
@@ -269,7 +289,7 @@
       } else if (name.endsWith("normals.png")) {
 
       } else if (name.endsWith(".png")) {
-        // myMaterial._albedoTexture = new Texture(url, scene, undefined, false);
+        // headMaterial._albedoTexture = new Texture(url, scene, undefined, false);
       } else if (name === "metadata.json") {
         const metadata = await fetch(url).then((response) => response.json());
 
@@ -327,7 +347,8 @@
         result.meshes.forEach((mesh) => {
           mesh.parent = hairContainer;
           mesh.name = "hair";
-          mesh.visibility = 0.8;
+          mesh.visibility = 0.9;
+          mesh.material = hairMaterial;
         });
       }
     }
@@ -562,7 +583,7 @@
 
 
       {#if currentImgHash != null }
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-6">
           {#if currentTab === 'emotions'}
             <div class="flex w-full justify-around flex-wrap gap-2">
               <div class="w-[10rem]">
@@ -636,6 +657,27 @@
                 Down
               </div>
             </div>
+            <div>
+              <div class="font-bold">Hair color</div>
+              <div class="flex gap-2">
+                <button class="simple-button" on:click={() => {
+                  hairColor = '#ffcc99';
+                }}>Blonde
+                </button>
+                <button class="simple-button" on:click={() => {
+                  hairColor = '#4c331a';
+                }}>Brunette
+                </button>
+                <button class="simple-button" on:click={() => {
+                  hairColor = '#4f1414';
+                }}>Red
+                </button>
+                <button class="simple-button" on:click={() => {
+                  hairColor = '#5d5d5d';
+                }}>Black
+                </button>
+              </div>
+            </div>
             <button class="simple-button" on:click={applyManualValuesFunc}>Apply expression</button>
           {:else if currentTab === 'manual'}
             <button class="simple-button" on:click={applyManualValuesFunc}>Apply manual FLAME sliders</button>
@@ -645,6 +687,11 @@
                 class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-500 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
               <span class="ml-3 text-sm font-medium text-gray-900 dark:text-gray-300 ">Show face texture</span>
             </label>
+            <div>
+              Hair color
+              <input type="color" bind:value={hairColor} />
+
+            </div>
             <div class="flex flex-col gap-8">
               <div class="flex gap-2 flex-wrap justify-around">
                 {#each expArr as value, i}
