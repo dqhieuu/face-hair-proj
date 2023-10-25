@@ -44,7 +44,7 @@ def emotion_code_to_meaning(emotion_code: int):
 
 
 from decalib.emotion_net import get_emotion_model
-emotion_model = get_emotion_model()
+emotion_model = get_emotion_model(use_flame_shape=False)
 
 
 def main(args):
@@ -71,7 +71,7 @@ def main(args):
             with torch.no_grad():
                 codedict = deca.encode(images)
                 opdict_pre_exp, visdict_pre_exp = deca.decode(codedict)
-                exp, pose = emotion_model(codedict['shape'], emotion_code_to_input_tensor(emo_code))
+                exp, pose = emotion_model(emotion_code_to_input_tensor(emo_code), codedict['shape'])
                 codedict['exp'] = exp
                 codedict['pose'] = pose
                 opdict, visdict = deca.decode(codedict)  # tensor
@@ -154,9 +154,9 @@ def output_from_image(img: np.array, deca, no_detect_pose=True, emotion_arr=None
             codedict['exp'] = torch.tensor([[0.0] * 50]).to(device)
 
         if emotion_arr is not None:
-            exp, pose = emotion_model(codedict['shape'], torch.tensor([emotion_arr]).to(device))
+            exp, pose = emotion_model(torch.tensor([emotion_arr], dtype=torch.float32).to(device), codedict['shape'])
             codedict['exp'] = exp
-            codedict['pose'][0:3] = pose[0:3]  # only jaw pose
+            codedict['pose'][:3] = pose[:3]  # only jaw pose
 
         if exp_arr is not None:
             codedict['exp'] = torch.tensor([exp_arr]).to(device)
@@ -187,7 +187,7 @@ def output_from_image(img: np.array, deca, no_detect_pose=True, emotion_arr=None
 
     # read file with trimesh
     import trimesh
-    mesh = trimesh.load('my_data/hair/emma.obj')
+    mesh = trimesh.load('my_data/hair/short.obj')
 
     five_perc_points_highest_z_hair = sorted(mesh.vertices, key=lambda x: x[1])[-int(len(mesh.vertices) * 0.05):]
     mean_x_hair = sum([v[0] for v in five_perc_points_highest_z_hair]) / len(five_perc_points_highest_z_hair)
@@ -237,7 +237,7 @@ def output_from_image(img: np.array, deca, no_detect_pose=True, emotion_arr=None
     shutil.copy('my_data/teeth.glb', os.path.join(savefolder, name, 'teeth.glb'))
 
     # copy hair emma.obj to savefolder
-    shutil.copy('my_data/hair/emma.obj', os.path.join(savefolder, name, 'hair.obj'))
+    shutil.copy('my_data/hair/short.obj', os.path.join(savefolder, name, 'hair.obj'))
 
     # zip all files and return
     shutil.make_archive(f'{savefolder}/{name}', 'zip', f'{savefolder}/{name}')

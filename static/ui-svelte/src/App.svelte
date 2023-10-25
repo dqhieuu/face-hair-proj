@@ -321,48 +321,51 @@
 
         console.log(metadata);
       } else if (name === "teeth.glb") {
-        // const result = await SceneLoader.ImportMeshAsync(
-        //   "",
-        //   url,
-        //   undefined,
-        //   undefined,
-        //   undefined,
-        //   ".glb"
-        // );
-        // result.meshes.forEach((mesh) => {
-        //   mesh.parent = rootNode;
-        // });
+        //   const result = await SceneLoader.ImportMeshAsync(
+        //     "",
+        //     url,
+        //     undefined,
+        //     undefined,
+        //     undefined,
+        //     ".glb"
+        //   );
+        //   result.meshes.forEach((mesh) => {
+        //     mesh.parent = rootNode;
+        //     mesh.name = "teeth";
+        //   });
       } else if (name === "hair.obj") {
-        const result = await SceneLoader.ImportMeshAsync(
-          "",
-          url,
-          undefined,
-          undefined,
-          undefined,
-          ".obj"
-        );
-        const hairContainer = new Mesh("hair_container", scene);
-        hairContainer.parent = rootNode;
-
-        result.meshes.forEach((mesh) => {
-          mesh.parent = hairContainer;
-          mesh.name = "hair";
-          mesh.visibility = 0.9;
-          mesh.material = hairMaterial;
-        });
+        //   const result = await SceneLoader.ImportMeshAsync(
+        //     "",
+        //     url,
+        //     undefined,
+        //     undefined,
+        //     undefined,
+        //     ".obj"
+        //   );
+        //   const hairContainer = new Mesh("hair_container", scene);
+        //   hairContainer.parent = rootNode;
+        //
+        //   result.meshes.forEach((mesh) => {
+        //     mesh.parent = hairContainer;
+        //     mesh.name = "hair";
+        //     mesh.visibility = 0.9;
+        //     mesh.material = hairMaterial;
+        //   });
       }
     }
+
 
     async function processZipBlob(blob: Blob) {
       const zip = new JSZip();
 
+      const concurrentTasks = [];
       const deferredFunctions = [];
-      const zipPromises = [];
+
       const zipFiles = await zip.loadAsync(blob);
 
       zipFiles.forEach((relativePath, zipEntry) => {
         console.log(relativePath);
-        const result = zipEntry.async("blob").then((blob) => {
+        const runningTask = zipEntry.async("blob").then((blob) => {
           const blobUrl = URL.createObjectURL(blob);
           if (relativePath === "metadata.json") {
             deferredFunctions.push(() => loadFileByName(blobUrl, relativePath));
@@ -370,10 +373,10 @@
             loadFileByName(blobUrl, relativePath);
           }
         });
-        zipPromises.push(result);
+        concurrentTasks.push(runningTask);
       });
 
-      await Promise.all(zipPromises);
+      await Promise.all(concurrentTasks);
 
       for await (const func of deferredFunctions) {
         await func();
