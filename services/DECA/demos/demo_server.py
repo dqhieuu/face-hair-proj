@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from flask import Flask, request, make_response
 
-from services.DECA.demos.demo_reconstruct import output_from_image, init_my_deca
+from demos.demo_reconstruct import output_from_image, init_my_deca
 
 server = Flask(__name__)
 

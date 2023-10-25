@@ -24,12 +24,11 @@ import argparse
 from tqdm import tqdm
 import torch
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from ..decalib.deca import DECA
-from ..decalib.datasets import datasets
-from ..decalib.utils import util
-from ..decalib.utils.config import cfg as deca_cfg
-from ..decalib.utils.tensor_cropper import transform_points
+from decalib.deca import DECA
+from decalib.datasets import datasets
+from decalib.utils import util
+from decalib.utils.config import cfg as deca_cfg
+from decalib.utils.tensor_cropper import transform_points
 
 
 def emotion_code_to_input_tensor(emotion_code: int):
@@ -43,7 +42,7 @@ def emotion_code_to_meaning(emotion_code: int):
     return ['neutral', 'happy', 'sad', 'fear', 'anger', 'surprise', 'disgust'][emotion_code - 1]
 
 
-from ..decalib.emotion_net import get_emotion_model
+from decalib.emotion_net import get_emotion_model
 emotion_model = get_emotion_model(use_flame_shape=False)
 
 
