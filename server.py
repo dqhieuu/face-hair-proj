@@ -65,4 +65,4 @@ async def update_parameters(params: Request):
 
 webapp.mount("/", StaticFiles(directory="static/ui-dist", html=True), name="static_2")
 
-webapp.mount("/upload-ui", StaticFiles(directory="static", html=True), name="static_old")
+# webapp.mount("/upload-ui", StaticFiles(directory="static", html=True), name="static_old")
